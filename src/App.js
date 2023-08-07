@@ -1,16 +1,23 @@
 import View from "./Components/View";
 import Login from "./Components/Login";
-import Admin from "./Components/Admin";
-
+import { useUserContext } from "./contexts/UserContext";
 import "./styles.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import SignUp from "./Components/Signup";
+import Admin from "./Components/Admin";
 
 export default function App() {
+  const { user } = useUserContext();
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/view/:email/:role" element={<View />} />
+        <Route
+          path="/"
+          element={<Login setUser={user.setUser} isNewUser={user.isNewUser} />}
+        />
+        <Route path="/login" element={<Login />} />
+        <Route path="/view" element={<View />} />
+        <Route path="/signup" element={<SignUp />} />
         <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>

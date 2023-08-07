@@ -1,7 +1,6 @@
 import * as React from "react";
-import { styled } from "@mui/material/styles";
-// import styled from "styled-components";
 import { StyledTableCell, StyledTableRow } from "../styles/style";
+import Snackbar from "@mui/material/Snackbar";
 import Table from "@mui/material/Table";
 import { useState, useEffect } from "react";
 import TableBody from "@mui/material/TableBody";
@@ -13,25 +12,33 @@ import Paper from "@mui/material/Paper";
 import MenuItem from "@mui/material/MenuItem";
 import { List, ListItem } from "@mui/material";
 import Button from "@mui/material/Button";
+import { useLocation } from "react-router-dom";
 import Select, { SelectChangeEvent } from "@mui/material/Select";
-import { slots, preferenceDescription } from "../Mocks/mockData";
 import {
-  getPreference,
-  createPreference,
-  updatePreference
-} from "../services/services";
+  slots,
+  preferenceDescription,
+  singleStudentpreference,
+} from "../Mocks/mockData";
+import {
+  getPreferences,
+  createPreferences,
+  updatePreferences,
+} from "../apis/index";
 import { useParams } from "react-router-dom";
 
 export default function CustomizedTables() {
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   let [originalPreferences, setoriginalPreferences] = useState({});
   let [preferences, setPreferences] = useState([]);
   let [isNewUser, setNewUser] = useState(false);
-  const { email, role } = useParams();
+  const location = useLocation();
+  const formData = location.state;
+  const { email, role } = formData;
   useEffect(() => {
     //store original preference and draftPreference
     //get api call should be triggered
-    fetchPreferenceData();
-  }, []);
+    fetchPreferenceData(formData?.email);
+  }, [email]);
 
   const handleChange = (day, slot, val) => {
     // update the value of preference
@@ -53,30 +60,44 @@ export default function CustomizedTables() {
     setPreferences(restPreferenceDetails);
   };
 
-  const fetchPreferenceData = async () => {
-    let singleStudentpreference = await getPreference(email);
-    console.log(singleStudentpreference)
-    setPreferences(singleStudentpreference["data"].weeklyPreferences);
-    setoriginalPreferences(singleStudentpreference["data"].weeklyPreferences);
+  const fetchPreferenceData = async (email) => {
+    await getPreferences(email)
+      .then((resp) => {
+        if (resp.status === 404) {
+          setPreferences(singleStudentpreference);
+          setoriginalPreferences(singleStudentpreference);
+          setNewUser(true); // Set isNewUser to true
+        } else {
+          return resp.json();
+        }
+      })
+      .then((data) => {
+        if (data) {
+          setPreferences(data.data?.weeklyPreferences);
+          setoriginalPreferences(data.data?.weeklyPreferences);
+        }
+      });
   };
 
   const onClickHandler = () => {
-    let payload = { email: email, preferences };
+    let payload = { email: email, weekly_preferences: preferences };
     if (isNewUser) {
-      createPreference(payload)
+      createPreferences(payload)
         .then((resp) => {
           console.log("successfully created");
+          setSnackbarOpen(true);
         })
         .catch((err) => {
           console.log("error while creating");
         });
     } else {
-      updatePreference(payload)
+      updatePreferences(payload)
         .then((resp) => {
-          console.log("successfully created");
+          console.log("successfully updated");
+          setSnackbarOpen(true);
         })
         .catch((err) => {
-          console.log("error while creating");
+          console.log("error while updating");
         });
     }
 
@@ -93,7 +114,7 @@ export default function CustomizedTables() {
         sx={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "center"
+          justifyContent: "center",
         }}
       >
         Prefernces
@@ -160,7 +181,7 @@ export default function CustomizedTables() {
             justifyContent: "center",
             alignItems: "center",
             marginTop: "30px",
-            left: "50%"
+            left: "50%",
           }}
         >
           {isNewUser ? "Create Prefrences" : "Save Changes"}
@@ -169,7 +190,7 @@ export default function CustomizedTables() {
       <List
         sx={{
           listStyleType: "disc",
-          listStylePosition: "inside"
+          listStylePosition: "inside",
         }}
       >
         {Object.values(preferenceDescription).map((item, key) => (
@@ -178,6 +199,12 @@ export default function CustomizedTables() {
           </ListItem>
         ))}
       </List>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message="Preferences successfully updated"
+      />
     </>
   );
 }
